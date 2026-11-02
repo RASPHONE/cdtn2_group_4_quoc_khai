@@ -76,19 +76,22 @@ CREATE TABLE IF NOT EXISTS blocked_times (
 -- ============================================
 -- SEED DATA - Services
 -- ============================================
-INSERT INTO services (name, description, price, duration, category, image_url) VALUES
+INSERT INTO services (name, description, price, duration, category, image_url)
+SELECT * FROM (VALUES
 ('Signature Gel Manicure', 'Long-lasting, high-gloss finish', '$45', '60 mins', 'manicure', 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=300&fit=crop'),
 ('Deluxe Spa Pedicure', 'Includes sea salt soak & massage', '$65', '75 mins', 'pedicure', 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400&h=300&fit=crop'),
 ('Nail Art Add-on', 'From minimalist to complex art', '$15', '+20 mins', 'art', 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=400&h=300&fit=crop'),
 ('Acrylic Full Set', 'Durable acrylic extensions', '$55', '90 mins', 'acrylic', 'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=400&h=300&fit=crop'),
 ('Gel Extensions', 'Natural-looking gel extensions', '$60', '90 mins', 'gel', 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=400&h=300&fit=crop'),
 ('Classic Manicure', 'Traditional nail care', '$25', '45 mins', 'manicure', 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400&h=300&fit=crop')
-ON CONFLICT DO NOTHING;
+) AS v(name, description, price, duration, category, image_url)
+WHERE NOT EXISTS (SELECT 1 FROM services);
 
 -- ============================================
 -- SEED DATA - Designs
 -- ============================================
-INSERT INTO designs (name, description, category, image_url) VALUES
+INSERT INTO designs (name, description, category, image_url)
+SELECT * FROM (VALUES
 ('Modern French', 'Timeless elegance', 'simple', 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=400&fit=crop'),
 ('Abstract Blush', 'Artistic statement', 'cute', 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400&h=400&fit=crop'),
 ('Rose Gold Shimmer', 'Elegant glitter', 'glitter', 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=400&h=400&fit=crop'),
@@ -97,14 +100,13 @@ INSERT INTO designs (name, description, category, image_url) VALUES
 ('Pink Ombre', 'Gradient effect', 'ombre', 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400&h=400&fit=crop'),
 ('Bridal Lace', 'Perfect for your special day', 'wedding', 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=400&fit=crop'),
 ('Classic Nude', 'Natural elegance', 'simple', 'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=400&h=400&fit=crop')
-ON CONFLICT DO NOTHING;
+) AS v(name, description, category, image_url)
+WHERE NOT EXISTS (SELECT 1 FROM designs);
 
 -- ============================================
--- SEED DATA - Admin User (password: admin123)
+-- USERS are NOT seeded here.
+-- Admin / user logins come from .env:  npm run seed:users
 -- ============================================
-INSERT INTO users (email, password, name, role) VALUES
-('admin@thuysnail.com', 'admin123', 'Admin', 'admin')
-ON CONFLICT (email) DO NOTHING;
 
 -- ============================================
 -- SEED DATA - Blocked Dates 2026
@@ -153,12 +155,19 @@ ALTER TABLE salon_info ENABLE ROW LEVEL SECURITY;
 -- ============================================
 -- RLS POLICIES (Allow all for demo)
 -- ============================================
+DROP POLICY IF EXISTS "Allow all users" ON users;
 CREATE POLICY "Allow all users" ON users FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all services" ON services;
 CREATE POLICY "Allow all services" ON services FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all designs" ON designs;
 CREATE POLICY "Allow all designs" ON designs FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all bookings" ON bookings;
 CREATE POLICY "Allow all bookings" ON bookings FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all blocked_dates" ON blocked_dates;
 CREATE POLICY "Allow all blocked_dates" ON blocked_dates FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all blocked_times" ON blocked_times;
 CREATE POLICY "Allow all blocked_times" ON blocked_times FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all salon_info" ON salon_info;
 CREATE POLICY "Allow all salon_info" ON salon_info FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================
