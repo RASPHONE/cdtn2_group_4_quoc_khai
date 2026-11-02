@@ -9,6 +9,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { login, register, isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
+    setNotice('')
     setIsLoading(true)
 
     try {
@@ -49,7 +51,11 @@ const LoginPage = () => {
 
     try {
       const result = await register({ name, email, password })
-      if (result.success) {
+      if (result.success && result.needsConfirmation) {
+        // Email confirmation is on: switch to the login tab and explain.
+        setNotice(result.message)
+        setIsLogin(true)
+      } else if (result.success) {
         // Clear redirect flag
         localStorage.removeItem('redirectAfterLogin')
         // Navigate to intended destination
@@ -180,6 +186,11 @@ const LoginPage = () => {
                     <input className="rounded border-outline-variant text-primary focus:ring-primary-container w-5 h-5 transition-all" id="remember" type="checkbox" />
                     <label className="font-label-md text-on-surface-variant cursor-pointer" htmlFor="remember">Remember me for 30 days</label>
                   </div>
+                  {notice && (
+                    <div className="bg-primary-container text-on-primary-container p-3 rounded-xl text-sm">
+                      {notice}
+                    </div>
+                  )}
                   {error && (
                     <div className="bg-error-container text-on-error-container p-3 rounded-xl text-sm">
                       {error}

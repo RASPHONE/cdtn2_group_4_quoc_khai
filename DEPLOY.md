@@ -1,46 +1,74 @@
-# Deploying Thuy's Nail (Vercel + Supabase)
+# Running Thuy's Nail
 
-The app is a static React/Vite site that talks to Supabase directly from the browser.
-Vercel only hosts the built files; all data lives in your Supabase project.
+The site is a static React/Vite app that talks to Supabase straight from the browser.
+Logins use **Supabase Auth**; who may read or change what is enforced in the database
+by row level security (`supabase/migrations/`).
 
-## 1. Supabase
+| | Cloud | Local (cross-platform) |
+|---|---|---|
+| Website | Vercel | Docker (`docker compose up`) on http://localhost:8080 |
+| Supabase | supabase.com project | Docker via `npx supabase start` |
+| Settings | Vercel env vars, `.env` for seeding | `.env.local` |
 
-1. Create a project at https://supabase.com/dashboard.
-2. Open **SQL Editor**, paste the whole of `supabase-schema.sql`, and **Run**.
-   It creates the tables, sample services/designs, holidays and salon info.
-   It is safe to run again (no duplicates).
-3. From **Project Settings > API keys**, note:
-   - Project URL
-   - anon / publishable key (public)
-   - service_role / secret key (**secret**, only for seeding)
+Roles: everyone can browse services, designs and salon info. Signed-in customers can
+book, see and cancel **their own** bookings. Admins (`app_metadata.role = "admin"`,
+set by `npm run seed:users`) see and manage everything.
 
-## 2. Seed login accounts from `.env`
+---
+
+## Local (Windows / macOS / Linux)
+
+Needs **Docker Desktop** (Windows/macOS) or Docker Engine (Linux), and **Node.js 20+**.
 
 ```bash
-cp .env.example .env      # Windows: copy .env.example .env
-# edit .env: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
-#            SUPABASE_SERVICE_ROLE_KEY, SEED_ADMIN_*, optional SEED_USER_<n>_*
 npm install
-npm run seed:users
+npx supabase start          # first run downloads the Supabase images (a few minutes)
 ```
 
-Accounts are upserted by email, so changing a password in `.env` and re-running
-`npm run seed:users` updates it. Run `npm run dev` to try it locally.
+`supabase start` applies `supabase/migrations/` and prints the local API URL and keys
+(`npx supabase status` shows them again). Create `.env.local` from `.env.example`:
 
-## 3. Vercel
+```
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_ANON_KEY=<Publishable key>
+SUPABASE_SERVICE_ROLE_KEY=<Secret key>
+SEED_ADMIN_EMAIL=...
+SEED_ADMIN_PASSWORD=...
+```
 
-1. **Add New > Project**, import this GitHub repo. Vercel detects Vite; keep the defaults.
-2. Under **Environment Variables** add only:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3. **Deploy**. Vite reads env vars at build time, so if you change them later, redeploy.
+```bash
+npm run seed:users          # creates the logins in local Supabase Auth
+docker compose up --build   # website on http://localhost:8080
+```
 
-Do **not** add `SUPABASE_SERVICE_ROLE_KEY` or the `SEED_*` values to Vercel. They are only
-needed on the machine that runs the seed script.
+Useful local addresses: Supabase Studio http://localhost:54323 (tables, users),
+Mailpit http://localhost:54324 (emails sent by local Auth).
 
-## Known limitations (demo-grade security)
+- Hot-reload development instead of the container: `npm run dev` (http://localhost:3000, also uses `.env.local`).
+- After changing code, rebuild the container: `docker compose up --build`.
+  Changing keys in `.env.local` only needs `docker compose up -d --force-recreate`.
+- Stop: `docker compose down` and `npx supabase stop` (data is kept).
+- Wipe the local database: `npx supabase db reset`, then `npm run seed:users` again.
 
-- Passwords are stored in plain text in the `users` table (the app compares them directly).
-- RLS policies allow everything for the anon key, so anyone with the site can read/modify
-  every table, including `users`. Fine for a class demo; for real customers, move login to
-  Supabase Auth and write per-role RLS policies.
+## Cloud (Vercel + Supabase)
+
+1. **Create a Supabase project** at https://supabase.com/dashboard.
+2. **Apply the schema**, either:
+   - `npx supabase login`, `npx supabase link --project-ref <ref>`, `npx supabase db push`, or
+   - paste `supabase/migrations/20261102000000_init.sql` into **SQL Editor** and run it.
+3. **Auth settings** (Authentication > URL Configuration): set **Site URL** to your Vercel URL,
+   e.g. `https://your-app.vercel.app`, so sign-up confirmation emails link back to the site.
+   New users must confirm their email by default; for a demo you can turn "Confirm email"
+   off in the Email provider settings. (Supabase's built-in mailer only sends a few emails per hour.)
+4. **Seed logins**: put the cloud URL, keys and `SEED_*` values in `.env`, then
+   `npm run seed:users -- --env .env` (the `--env` flag makes sure `.env.local` is ignored).
+5. **Vercel**: Add New > Project, import this repo (Vite is detected). Add only
+   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under Environment Variables, then deploy.
+   Vite reads them at build time, so redeploy after changing them.
+
+Never put `SUPABASE_SERVICE_ROLE_KEY` or `SEED_*` values in Vercel.
+
+## Schema changes
+
+Add a new file under `supabase/migrations/` (or `npx supabase migration new <name>`),
+test it locally with `npx supabase db reset`, then `npx supabase db push` to the cloud.

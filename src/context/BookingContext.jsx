@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
 
 export const BookingContext = createContext()
 
@@ -15,12 +16,24 @@ export const BookingProvider = ({ children }) => {
   const [allBookings, setAllBookings] = useState([])
   const [isLoading, setIsLoading] = useState(false)
 
+  const { user } = useAuth()
+
   // Load data tu Supabase
   useEffect(() => {
     loadServices()
     loadDesigns()
-    loadBookings()
   }, [])
+
+  // Bookings are private (row level security): customers only get their own,
+  // admins get everything. Reload whenever the signed-in user changes.
+  useEffect(() => {
+    if (user?.id) {
+      loadBookings()
+    } else {
+      setBookings([])
+      setAllBookings([])
+    }
+  }, [user?.id])
 
   const loadServices = async () => {
     try {

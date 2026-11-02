@@ -12,14 +12,15 @@ import {
 } from 'react-icons/fa'
 
 const AdminPage = () => {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, isLoading } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!isAdmin) {
+    // Wait until Supabase has restored the session before deciding.
+    if (!isLoading && !isAdmin) {
       navigate('/login')
     }
-  }, [isAdmin, navigate])
+  }, [isAdmin, isLoading, navigate])
 
   if (!isAdmin) return null
 
@@ -880,7 +881,7 @@ const DesignsPage = () => {
 
 // Settings Page - Change Admin Password
 const SettingsPage = () => {
-  const { user } = useAuth()
+  const { user, changePassword } = useAuth()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -910,20 +911,13 @@ const SettingsPage = () => {
 
     setIsLoading(true)
     try {
-      // Verify current password
-      const { data: admin } = await supabaseDb.login(user?.email, currentPassword)
+      // Verifies the current password, then updates it in Supabase Auth
+      const result = await changePassword(currentPassword, newPassword)
 
-      if (!admin) {
-        setError('Mật khẩu hiện tại không đúng')
-        setIsLoading(false)
-        return
-      }
-
-      // Update password using supabaseDb
-      const { error: updateError } = await supabaseDb.updateUser(user?.id, { password: newPassword })
-
-      if (updateError) {
-        setError('Không thể cập nhật mật khẩu: ' + updateError.message)
+      if (!result.success) {
+        setError(result.error === 'Mat khau hien tai khong dung'
+          ? 'Mật khẩu hiện tại không đúng'
+          : 'Không thể cập nhật mật khẩu: ' + result.error)
         setIsLoading(false)
         return
       }

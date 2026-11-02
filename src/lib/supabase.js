@@ -1,12 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Values come from (first match wins):
+//  1. window.__ENV__  - written at container start by docker/env-config.sh (local Docker)
+//  2. import.meta.env - Vite build-time env (.env / .env.local, or Vercel project settings)
+const runtimeEnv = (typeof window !== 'undefined' && window.__ENV__) || {}
+const supabaseUrl = runtimeEnv.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = runtimeEnv.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. ' +
-    'Set them in .env (local) or in Vercel > Project Settings > Environment Variables.'
+    'Set them in .env / .env.local (local) or in Vercel > Project Settings > Environment Variables.'
   )
 }
 
@@ -14,45 +18,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Helper functions
 export const supabaseDb = {
-  // Users
-  async login(email, password) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .eq('password', password)
-      .single()
-    return { data, error }
-  },
-
-  async register(email, password, name) {
-    const { data, error } = await supabase
-      .from('users')
-      .insert([{ email, password, name, role: 'user' }])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async getUserByEmail(email) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single()
-    return { data, error }
-  },
-
-  async updateUser(id, updates) {
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    return { data, error }
-  },
-
   // Services
   async getServices() {
     const { data, error } = await supabase

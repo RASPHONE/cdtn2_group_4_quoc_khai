@@ -1,0 +1,17 @@
+# Local-only stack:
+#   npx supabase start        # Supabase (database, auth, API, Studio) in Docker
+#   npm run seed:users        # logins from .env.local
+#   docker compose up --build # this website on http://localhost:8080
+name: thuys-nail
+
+services:
+  web:
+    build: .
+    image: thuys-nail-web
+    ports:
+      - "8080:80"
+    # VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are read from here at start-up.
+    # The browser calls Supabase directly, so http://127.0.0.1:54321 works as-is.
+    env_file:
+      - .env.local
+    restart: unless-stopped
